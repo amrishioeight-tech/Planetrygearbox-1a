@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IO Eight Planetary Gearbox Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0: #0d0f11;
+    --bg1: #141719;
+    --bg2: #1c1f23;
+    --bg3: #252a2f;
+    --bg4: #2e343b;
+    --line: #2e3540;
+    --text0: #e8ecf0;
+    --text1: #a8b4c0;
+    --text2: #607080;
+    --accent: #f0a500;
+    --accent2: #00c9a0;
+    --red: #e05252;
+    --blue: #4a9eff;
+    --purple: #9b7ee8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg0);
+    color: var(--text0);
+    font-family: var(--sans);
+    font-size: 13px;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg1);
+    border-bottom: 1px solid var(--line);
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 52px;
+  }
+  .logo-gear {
+    width: 28px; height: 28px;
+    animation: spin 8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  header h1 {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text0);
+  }
+  header h1 span { color: var(--accent); }
+  .hbadge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    border: 1px solid var(--line);
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 52px);
+  }
+
+  /* ── SIDEBAR ── */
+  aside {
+    background: var(--bg1);
+    border-right: 1px solid var(--line);
+    padding: 20px 18px;
+    overflow-y: auto;
+  }
+  .sec-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sec-label:first-child { margin-top: 0; }
+
+  /* drive mode buttons */
+  .mode-btns { display: flex; flex-direction: column; gap: 6px; }
+  .mode-btn {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    color: var(--text1);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 9px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: all .15s;
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--text0); }
+  .mode-btn.active {
+    background: rgba(240,165,0,.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mode-btn .ml { font-size: 9px; color: var(--text2); margin-top: 3px; font-family: var(--sans); }
+  .mode-btn.active .ml { color: rgba(240,165,0,.6); }
+
+  /* input rows */
+  .inp-row {
+    margin-bottom: 14px;
+  }
+  .inp-row label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--text1);
+  }
+  .inp-row label .lval {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bg4);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: transform .1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+  .inp-row .range-ends {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--text2);
+    font-family: var(--mono);
+    margin-top: 3px;
+  }
+
+  .number-inp {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--text0);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .number-inp:focus { border-color: var(--accent); }
+
+  /* ── MAIN PANEL ── */
+  main {
+    background: var(--bg0);
+    padding: 20px 24px;
+    overflow-y: auto;
+  }
+
+  /* status bar */
+  .status-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 12px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+  .pill-ok  { background: rgba(0,201,160,.12); color: var(--accent2); border: 1px solid rgba(0,201,160,.3); }
+  .pill-warn{ background: rgba(240,165,0,.12); color: var(--accent);  border: 1px solid rgba(240,165,0,.3); }
+  .pill-err { background: rgba(224,82,82,.12); color: var(--red);     border: 1px solid rgba(224,82,82,.3); }
+
+  /* metric grid */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .metric {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .metric .ml { font-size: 10px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.06em; margin-bottom: 6px; }
+  .metric .mv { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text0); }
+  .metric .mu { font-size: 10px; color: var(--text2); margin-left: 3px; }
+  .metric.hi { border-color: rgba(240,165,0,.35); }
+  .metric.hi .mv { color: var(--accent); }
+
+  /* two-col layout below metrics */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  /* panel card */
+  .panel {
+    background: var(--bg1);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .panel-head {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 14px; }
+
+  /* spec table */
+  .spec-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .spec-table th {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--text2);
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--line);
+    text-transform: uppercase;
+  }
+  .spec-table td {
+    font-family: var(--mono);
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--line);
+    color: var(--text1);
+  }
+  .spec-table tr:last-child td { border-bottom: none; }
+  .spec-table .hi { color: var(--text0); font-weight: 500; }
+  .spec-table .acc { color: var(--accent); }
+  .spec-table .grn { color: var(--accent2); }
+  .spec-table .blu { color: var(--blue); }
+
+  /* SVG canvas */
+  .svg-wrap {
+    background: var(--bg0);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  /* kinematics kv list */
+  .kv-list { display: flex; flex-direction: column; gap: 2px; }
+  .kv {
+    display: flex; justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .kv:last-child { border-bottom: none; }
+  .kk { font-size: 11px; color: var(--text2); }
+  .kv_ { font-family: var(--mono); font-size: 12px; color: var(--text0); font-weight: 500; }
+
+  /* power bar */
+  .pwr-bar-wrap { margin-top: 10px; }
+  .pwr-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .pwr-track { background: var(--bg3); border-radius: 3px; height: 8px; overflow: hidden; }
+  .pwr-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .3s; }
+
+  /* sweep table */
+  .sweep-wrap { overflow-x: auto; }
+  .sweep-table {
+    width: 100%; border-collapse: collapse; font-size: 11px;
+    font-family: var(--mono);
+  }
+  .sweep-table th {
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .sweep-table th:first-child { text-align: left; }
+  .sweep-table td {
+    padding: 6px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+    color: var(--text1);
+    white-space: nowrap;
+  }
+  .sweep-table td:first-child { text-align: left; color: var(--text0); }
+  .sweep-table tr.active-row td { background: rgba(240,165,0,.07); color: var(--text0); }
+  .sweep-table tr.active-row td:first-child { color: var(--accent); }
+
+  /* checks */
+  .check-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .check-text { color: var(--text1); line-height: 1.4; }
+  .check-formula { font-family: var(--mono); font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+  @media (max-width: 960px) {
+    .shell { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: repeat(2,1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    aside { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo-gear" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="5" fill="#f0a500"/>
+    <path d="M14 2v4M14 22v4M2 14h4M22 14h4M5.5 5.5l2.8 2.8M19.7 19.7l2.8 2.8M5.5 22.5l2.8-2.8M19.7 8.3l2.8-2.8" stroke="#f0a500" stroke-width="2.2" stroke-linecap="round"/>
+  </svg>
+  <h1>PLANETARY<span>GB</span> ANALYSER</h1>
+  <span class="hbadge">v2.0 · EPICYCLIC</span>
+</header>
+
+<div class="shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside>
+    <div class="sec-label">Drive mode</div>
+    <div class="mode-btns">
+      <button class="mode-btn active" onclick="setMode(0,this)">
+        MODE 0 — Fixed Ring
+        <div class="ml">Sun input → Carrier output (reducer)</div>
+      </button>
+      <button class="mode-btn" onclick="setMode(1,this)">
+        MODE 1 — Fixed Sun
+        <div class="ml">Ring input → Carrier output</div>
+      </button>
+      <button class="mode-btn" onclick="setMode(2,this)">
+        MODE 2 — Fixed Carrier
+        <div class="ml">Sun input → Ring output (reverse)</div>
+      </button>
+    </div>
+
+    <div class="sec-label">Tooth counts</div>
+
+    <div class="inp-row">
+      <label>Sun teeth (Z<sub>s</sub>) <span class="lval" id="lZs">20</span></label>
+      <input type="range" id="Zs" min="12" max="60" step="1" value="20" oninput="sl('Zs')">
+      <div class="range-ends"><span>12</span><span>60</span></div>
+    </div>
+    <div class="inp-row">
+      <label>Planet teeth (Z<sub>p</sub>) <span class="lval" id="lZp">30</span></label>
+      <input type="range" id="Zp" min="10" max="60" step="1" value="30" oninput="sl('Zp')">
+      <div class="range-ends"><span>10</span><span>60</span></div>
+    </div>
+
+    <div class="sec-label">Module &amp; geometry</div>
+    <div class="inp-row">
+      <label>Module m (mm) <span class="lval" id="lmod">2.0</span></label>
+      <input type="range" id="mod" min="0.5" max="8" step="0.5" value="2" oninput="sl('mod',1)">
+      <div class="range-ends"><span>0.5</span><span>8</span></div>
+    </div>
+    <div class="inp-row">
+      <label>No. of planets <span class="lval" id="lNp">3</span></label>
+      <input type="range" id="Np" min="2" max="6" step="1" value="3" oninput="sl('Np')">
+      <div class="range-ends"><span>2</span><span>6</span></div>
+    </div>
+
+    <div class="sec-label">Operating conditions</div>
+    <div class="inp-row">
+      <label>Input RPM <span class="lval" id="lrpm">1500</span></label>
+      <input type="range" id="rpm" min="100" max="6000" step="50" value="1500" oninput="sl('rpm')">
+      <div class="range-ends"><span>100</span><span>6000</span></div>
+    </div>
+    <div class="inp-row">
+      <label>Input torque (N·m) <span class="lval" id="lTin">50</span></label>
+      <input type="range" id="Tin" min="1" max="1000" step="1" value="50" oninput="sl('Tin')">
+      <div class="range-ends"><span>1</span><span>1000</span></div>
+    </div>
+    <div class="inp-row">
+      <label>Efficiency (%) <span class="lval" id="leff">97</span></label>
+      <input type="range" id="eff" min="80" max="99" step="1" value="97" oninput="sl('eff')">
+      <div class="range-ends"><span>80%</span><span>99%</span></div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main>
+
+    <!-- status bar -->
+    <div class="status-bar" id="statusBar"></div>
+
+    <!-- top metrics -->
+    <div class="metric-grid">
+      <div class="metric hi">
+        <div class="ml">GEAR RATIO</div>
+        <div class="mv" id="mGR">—</div>
+      </div>
+      <div class="metric">
+        <div class="ml">OUTPUT RPM</div>
+        <div class="mv" id="mRPM">—<span class="mu">rpm</span></div>
+      </div>
+      <div class="metric">
+        <div class="ml">OUTPUT TORQUE</div>
+        <div class="mv" id="mTout">—<span class="mu">N·m</span></div>
+      </div>
+      <div class="metric">
+        <div class="ml">RING TEETH Z<sub>r</sub></div>
+        <div class="mv" id="mZr">—</div>
+      </div>
+    </div>
+
+    <!-- schematic + kinematics -->
+    <div class="two-col">
+      <div class="svg-wrap">
+        <svg id="pgSvg" viewBox="0 0 360 280" width="100%"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Kinematics &amp; power</div>
+        <div class="panel-body">
+          <div class="kv-list" id="kvList"></div>
+          <div class="pwr-bar-wrap">
+            <div class="pwr-label">
+              <span>Power efficiency</span>
+              <span id="pwrEff">—</span>
+            </div>
+            <div class="pwr-track">
+              <div class="pwr-fill" id="pwrFill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- gear spec table + checks -->
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-head">Gear specifications</div>
+        <div class="panel-body" style="padding:0">
+          <table class="spec-table">
+            <thead>
+              <tr>
+                <th>Component</th><th>Z</th><th>m</th>
+                <th>PCD mm</th><th>OD mm</th><th>Root mm</th><th>Type</th>
+              </tr>
+            </thead>
+            <tbody id="specBody"></tbody>
+          </table>
+          <div style="padding:10px 14px; border-top:1px solid var(--line)">
+            <div class="kv-list" id="geomKv"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Gear checks</div>
+        <div class="panel-body">
+          <div id="checkList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- parametric sweep table -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head">Sun teeth sweep — Z_s 12→40 (current row highlighted)</div>
+      <div class="panel-body" style="padding:0">
+        <div class="sweep-wrap">
+          <table class="sweep-table" id="sweepTable"></table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let mode = 0;
+
+function sl(id, dec) {
+  const v = parseFloat(document.getElementById(id).value);
+  document.getElementById('l'+id).textContent = dec ? v.toFixed(dec) : v;
+  update();
+}
+
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  update();
+}
+
+function g(id) { return parseFloat(document.getElementById(id).value); }
+
+// ── CORE MODEL (mirrors planetary_gearbox.py) ──────────────────
+
+function gearDims(Z, m, internal) {
+  const pcd = Z * m;
+  const od       = internal ? pcd - 2*m   : pcd + 2*m;
+  const root_dia = internal ? pcd + 2.5*m : pcd - 2.5*m;
+  return { pcd, od, root_dia, type: internal ? 'internal' : 'external' };
+}
+
+function compute(Zs, Zp, m, Np, rpm, Tin, eff, driveMode) {
+  const Zr = Zs + 2*Zp;
+  const sun    = gearDims(Zs, m, false);
+  const planet = gearDims(Zp, m, false);
+  const ring   = gearDims(Zr, m, true);
+
+  // checks
+  const checks = [];
+  checks.push({
+    label: 'Meshing condition',
+    formula: `Z_r = Z_s + 2·Z_p → ${Zr} = ${Zs} + ${2*Zp}`,
+    ok: true  // always true since we derive Zr from this
+  });
+  const assemblyOk = (Zr + Zs) % Np === 0;
+  checks.push({
+    label: 'Assembly condition',
+    formula: `(Z_r + Z_s) mod n_p = 0 → (${Zr}+${Zs}) mod ${Np} = ${(Zr+Zs)%Np}`,
+    ok: assemblyOk
+  });
+  const lhs = Math.sin(Math.PI / Np);
+  const rhs = (Zp + 2) / (Zr - Zp);
+  const neighbourOk = lhs > rhs;
+  checks.push({
+    label: 'Neighbour (no-clash)',
+    formula: `sin(π/${Np}) = ${lhs.toFixed(4)} > ${rhs.toFixed(4)}`,
+    ok: neighbourOk
+  });
+
+  // kinematics
+  let GR, rpm_out, rpm_carrier, rpm_planet;
+  if (driveMode === 0) {
+    GR = 1 + Zr/Zs;
+    rpm_out = rpm / GR;
+    rpm_carrier = rpm_out;
+    rpm_planet = rpm * Zs / Zp;
+  } else if (driveMode === 1) {
+    GR = Zr / (Zr + Zs);
+    rpm_out = rpm / GR;
+    rpm_carrier = rpm_out;
+    rpm_planet = rpm * Zr / Zp;
+  } else {
+    GR = -(Zr / Zs);
+    rpm_out = rpm / Math.abs(GR);
+    rpm_carrier = 0;
+    rpm_planet = rpm * Zs / Zp;
+  }
+
+  // dynamics
+  const Tout = Tin * Math.abs(GR) * (eff/100);
+  const Pin  = (Tin * rpm * 2 * Math.PI / 60) / 1000;
+  const Pout = (Tout * rpm_out * 2 * Math.PI / 60) / 1000;
+  const pcd_sun_m = Zs * m / 1000;
+  const Ft = (2 * Tin) / pcd_sun_m;
+  const pitch_v = (pcd_sun_m * Math.PI * rpm) / 60;
+  const Cd = (Zs + Zp) * m / 2;
+
+  return { Zr, sun, planet, ring, checks,
+    GR, rpm_out, rpm_carrier, rpm_planet,
+    Tout, Pin, Pout, Ft, pitch_v, Cd,
+    ring_od: ring.root_dia,
+    valid: assemblyOk && neighbourOk };
+}
+
+// ── UI RENDER ──────────────────────────────────────────────────
+
+function fmt(v, dec=2) { return Number(v).toFixed(dec); }
+
+function update() {
+  const Zs=g('Zs'), Zp=g('Zp'), m=g('mod'), Np=g('Np'),
+        rpm=g('rpm'), Tin=g('Tin'), eff=g('eff');
+  const r = compute(Zs, Zp, m, Np, rpm, Tin, eff, mode);
+
+  // status bar
+  const pills = [];
+  if (r.valid) pills.push({cls:'pill-ok', t:'ALL CHECKS PASSED'});
+  else pills.push({cls:'pill-warn', t:'WARNINGS — CHECK PANEL'});
+  pills.push({cls:'pill-ok', t:`MODE ${mode}`});
+  pills.push({cls:'pill-ok', t:`Z_r = ${r.Zr}`});
+  document.getElementById('statusBar').innerHTML =
+    pills.map(p=>`<span class="status-pill ${p.cls}">${p.t}</span>`).join('');
+
+  // top metrics
+  document.getElementById('mGR').textContent   = fmt(Math.abs(r.GR),4);
+  document.getElementById('mRPM').innerHTML    = fmt(r.rpm_out,1)+'<span class="mu">rpm</span>';
+  document.getElementById('mTout').innerHTML   = fmt(r.Tout,1)+'<span class="mu">N·m</span>';
+  document.getElementById('mZr').textContent   = r.Zr;
+
+  // kv list
+  const kvData = [
+    ['Gear ratio',        fmt(Math.abs(r.GR),4), ''],
+    ['Input RPM',         fmt(rpm,0),             'rpm'],
+    ['Output RPM',        fmt(r.rpm_out,1),       'rpm'],
+    ['Planet spin',       fmt(r.rpm_planet,1),    'rpm'],
+    ['Carrier RPM',       fmt(r.rpm_carrier,1),   'rpm'],
+    ['Pitch velocity',    fmt(r.pitch_v,3),        'm/s'],
+    ['Input torque',      fmt(Tin,1),              'N·m'],
+    ['Output torque',     fmt(r.Tout,1),           'N·m'],
+    ['Tangential force',  fmt(r.Ft,1),             'N'],
+    ['Input power',       fmt(r.Pin,3),            'kW'],
+    ['Output power',      fmt(r.Pout,3),           'kW'],
+  ];
+  document.getElementById('kvList').innerHTML = kvData.map(([k,v,u])=>
+    `<div class="kv"><span class="kk">${k}</span><span class="kv_">${v}<span style="font-size:10px;color:var(--text2);margin-left:3px">${u}</span></span></div>`
+  ).join('');
+
+  // power bar
+  const pct = Math.min(100, (r.Pout/r.Pin)*100);
+  document.getElementById('pwrEff').textContent = fmt(pct,1)+'%';
+  document.getElementById('pwrFill').style.width = pct+'%';
+
+  // spec table
+  const gearRows = [
+    {name:'Sun gear',   cls:'acc', Z:Zs,   ...r.sun},
+    {name:'Planet gear',cls:'blu', Z:Zp,   ...r.planet},
+    {name:'Ring gear',  cls:'grn', Z:r.Zr, ...r.ring},
+  ];
+  document.getElementById('specBody').innerHTML = gearRows.map(g=>
+    `<tr>
+      <td class="hi ${g.cls}">${g.name}</td>
+      <td>${g.Z}</td><td>${fmt(m,1)}</td>
+      <td>${fmt(g.pcd,2)}</td><td>${fmt(g.od,2)}</td>
+      <td>${fmt(g.root_dia,2)}</td>
+      <td style="color:var(--text2)">${g.type}</td>
+    </tr>`
+  ).join('');
+
+  document.getElementById('geomKv').innerHTML = [
+    ['Centre distance', fmt(r.Cd,2)+' mm'],
+    ['Ring housing OD', fmt(r.ring_od,2)+' mm'],
+    ['No. of planets',  Np],
+  ].map(([k,v])=>`<div class="kv"><span class="kk">${k}</span><span class="kv_">${v}</span></div>`).join('');
+
+  // checks
+  document.getElementById('checkList').innerHTML = r.checks.map(c=>
+    `<div class="check-item">
+      <span class="check-icon">${c.ok ? '✅' : '⚠️'}</span>
+      <div>
+        <div class="check-text" style="color:${c.ok?'var(--accent2)':'var(--accent)'}">${c.label}</div>
+        <div class="check-formula">${c.formula}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  // schematic
+  drawSVG(r, Zs, Zp, Np, m);
+
+  // sweep table
+  drawSweep(Zp, m, Np, rpm, Tin, eff, Zs);
+}
+
+// ── SVG SCHEMATIC ──────────────────────────────────────────────
+
+function drawSVG(r, Zs, Zp, Np, m) {
+  const svg = document.getElementById('pgSvg');
+  const cx=180, cy=148;
+  const Rr = r.ring.pcd/2, Rs=r.sun.pcd/2, Rp=r.planet.pcd/2;
+  const scale = Math.min(120/Rr, 2.2);
+  const sRr=Rr*scale, sRs=Rs*scale, sRp=Rp*scale, sRc=(Rs+Rp)*scale;
+
+  let planetEls = '';
+  for(let i=0;i<Np;i++){
+    const a = (2*Math.PI*i/Np) - Math.PI/2;
+    const px = cx + sRc*Math.cos(a), py = cy + sRc*Math.sin(a);
+    // carrier arm
+    planetEls += `<line x1="${cx}" y1="${cy}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}"
+      stroke="#f0a500" stroke-width="1" stroke-dasharray="5 3" opacity="0.5"/>`;
+    // planet gear teeth hint
+    planetEls += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${sRp.toFixed(1)}"
+      fill="rgba(74,158,255,0.08)" stroke="#4a9eff" stroke-width="1.5"/>`;
+    // planet center dot
+    planetEls += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" fill="#4a9eff"/>`;
+    // planet label
+    if(i===0){
+      const lx=(cx+px)/2-18, ly=(cy+py)/2-6;
+      planetEls += `<text x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" font-size="9"
+        fill="#4a9eff" font-family="'IBM Plex Mono'" opacity="0.8">Z_p=${Zp}</text>`;
+    }
+  }
+
+  // teeth count annotation positions
+  const annR = `<text x="${(cx+sRr+8).toFixed(0)}" y="${cy}" font-size="9" fill="#00c9a0" font-family="'IBM Plex Mono'" dominant-baseline="middle">Z_r=${r.Zr}</text>`;
+  const annS = `<text x="${cx}" y="${(cy+sRs+12).toFixed(0)}" font-size="9" fill="#f0a500" font-family="'IBM Plex Mono'" text-anchor="middle">Z_s=${Zs}</text>`;
+
+  svg.innerHTML = `
+    <!-- ring -->
+    <circle cx="${cx}" cy="${cy}" r="${sRr.toFixed(1)}" fill="rgba(0,201,160,0.05)" stroke="#00c9a0" stroke-width="2.5"/>
+    <circle cx="${cx}" cy="${cy}" r="${(sRr+5).toFixed(1)}" fill="none" stroke="#00c9a0" stroke-width="0.5" opacity="0.3"/>
+    <!-- carrier orbit -->
+    <circle cx="${cx}" cy="${cy}" r="${sRc.toFixed(1)}" fill="none" stroke="#f0a500" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.25"/>
+    <!-- planets -->
+    ${planetEls}
+    <!-- sun -->
+    <circle cx="${cx}" cy="${cy}" r="${sRs.toFixed(1)}" fill="rgba(240,165,0,0.12)" stroke="#f0a500" stroke-width="2"/>
+    <circle cx="${cx}" cy="${cy}" r="4" fill="#f0a500"/>
+    <!-- input arrow on sun -->
+    <line x1="${cx}" y1="${(cy-sRs-20).toFixed(1)}" x2="${cx}" y2="${(cy-sRs-6).toFixed(1)}"
+      stroke="#f0a500" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- annotations -->
+    ${annR}${annS}
+    <!-- legend -->
+    <rect x="8" y="8" width="90" height="60" rx="3" fill="rgba(20,23,25,0.85)" stroke="var(--line)" stroke-width="0.5"/>
+    <circle cx="20" cy="22" r="5" fill="rgba(240,165,0,0.2)" stroke="#f0a500" stroke-width="1.2"/>
+    <text x="30" y="26" font-size="9" fill="#f0a500" font-family="'IBM Plex Mono'">Sun</text>
+    <circle cx="20" cy="38" r="5" fill="rgba(74,158,255,0.15)" stroke="#4a9eff" stroke-width="1.2"/>
+    <text x="30" y="42" font-size="9" fill="#4a9eff" font-family="'IBM Plex Mono'">Planet ×${Np}</text>
+    <circle cx="20" cy="54" r="5" fill="rgba(0,201,160,0.1)" stroke="#00c9a0" stroke-width="1.2"/>
+    <text x="30" y="58" font-size="9" fill="#00c9a0" font-family="'IBM Plex Mono'">Ring</text>
+    <!-- mode label -->
+    <text x="${cx}" y="272" text-anchor="middle" font-size="9" fill="#607080" font-family="'IBM Plex Mono'">
+      MODE ${mode}: ${ ['FIXED RING','FIXED SUN','FIXED CARRIER'][mode] }
+    </text>
+    <defs>
+      <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#f0a500"/>
+      </marker>
+    </defs>
+  `;
+}
+
+// ── SWEEP TABLE ─────────────────────────────────────────────────
+
+function drawSweep(Zp, m, Np, rpm, Tin, eff, currentZs) {
+  const cols = ['Z_s','Z_r','GR','RPM out','T_out N·m','P_in kW','P_out kW','PCD_s mm'];
+  let rows = '';
+  for(let Zs=12; Zs<=40; Zs+=2){
+    const r = compute(Zs, Zp, m, Np, rpm, Tin, eff, mode);
+    const active = Zs===currentZs ? 'active-row' : '';
+    rows += `<tr class="${active}">
+      <td>${Zs}</td>
+      <td>${r.Zr}</td>
+      <td>${fmt(Math.abs(r.GR),3)}</td>
+      <td>${fmt(r.rpm_out,1)}</td>
+      <td>${fmt(r.Tout,1)}</td>
+      <td>${fmt(r.Pin,3)}</td>
+      <td>${fmt(r.Pout,3)}</td>
+      <td>${fmt(r.sun.pcd,1)}</td>
+    </tr>`;
+  }
+  document.getElementById('sweepTable').innerHTML =
+    `<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+}
+
+// initialise slider labels
+['Zs','Zp','Np','rpm','Tin','eff'].forEach(id => {
+  document.getElementById('l'+id).textContent = g(id);
+});
+document.getElementById('lmod').textContent = g('mod').toFixed(1);
+
+update();
+</script>
+</body>
+</html>
